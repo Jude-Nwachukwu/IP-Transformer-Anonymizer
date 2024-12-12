@@ -6,7 +6,7 @@
 
 - Anonymize IPv4 and IPv6 addresses by:
   - Removing the last octet/hex.
-  - Removing the last two or three octets.
+  - Removing the last two or three octets/hexets.
   - Redacting the full IP address (e.g., `0.0.0.0`).
   - Replacing with a static IP address (customizable).
 - Hash IP addresses using SHA-256 with selectable output encoding:
