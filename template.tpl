@@ -13,8 +13,8 @@ ___INFO___
   "id": "cvt_temp_public_id",
   "version": 1,
   "securityGroups": [],
-  "displayName": "IP Transformer/Anonymizer",
-  "description": "Anonymize IPv4/IPv6 addresses with multiple methods including removing octets, redacting, or replacing with a static IP.",
+  "displayName": "The IP Transformer/Anonymizer",
+  "description": "Anonymize IPv4/IPv6 addresses with multiple methods including removing octets, hexets for IPV6, redacting, or replacing with a static IP.",
   "containerContexts": [
     "SERVER"
   ]
@@ -140,6 +140,15 @@ const staticIp = data.static_ip_address;
 const ipVariable = data.ip_address_variable;
 const hashEncoding = data.hash_encoding || "hex"; // Default to hex
 
+// Define regex patterns as strings
+const ipv4Regex = "^(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)){3}$";
+const ipv6Regex = "^[a-fA-F0-9:]+$";
+
+// Function to validate IP address
+function isValidIP(ip) {
+  return ip.match(ipv4Regex) !== null || ip.match(ipv6Regex) !== null;
+}
+
 // Get the input IP address
 let inputIp;
 if (ipSource === "read_from_event_data" && queryPermission("read_event_data", "ip_override")) {
@@ -147,31 +156,71 @@ if (ipSource === "read_from_event_data" && queryPermission("read_event_data", "i
 } else if (ipSource === "use_variable_value") {
   inputIp = ipVariable;
 } else {
-  return "Invalid IP Source";
+  return undefined; // Invalid IP Source
 }
 
 // Ensure the input IP is defined
 if (!inputIp) {
-  return "Input IP Address is missing.";
+  return undefined; // Missing IP Address
 }
 
-// Anonymization logic
-if (anonymizationMethod === "last_octet") {
-  return inputIp.substring(0, inputIp.lastIndexOf(".")) + ".0";
-} else if (anonymizationMethod === "last_two_octets") {
-  const segments = inputIp.split(".");
-  return segments[0] + "." + segments[1] + ".0.0";
-} else if (anonymizationMethod === "last_three_octets") {
-  const segments = inputIp.split(".");
-  return segments[0] + ".0.0.0";
-} else if (anonymizationMethod === "redact_ip") {
-  return "0.0.0.0";
-} else if (anonymizationMethod === "static_ip") {
-  return staticIp || "0.0.0.0";
+// Strip port numbers if present
+if (inputIp.indexOf(":") !== -1) {
+  const lastColonIndex = inputIp.lastIndexOf(":");
+  if (inputIp.slice(lastColonIndex).match("^:\\d+$")) {
+    inputIp = inputIp.slice(0, lastColonIndex); // Remove port number
+  }
+}
+
+// Check if the input is valid IPv4 or IPv6
+const isIPv4 = inputIp.match(ipv4Regex) !== null;
+const isIPv6 = inputIp.match(ipv6Regex) !== null;
+
+// Anonymization logic for IPv4
+if (isIPv4) {
+  if (anonymizationMethod === "last_octet") {
+    return inputIp.substring(0, inputIp.lastIndexOf(".")) + ".0";
+  } else if (anonymizationMethod === "last_two_octets") {
+    const segments = inputIp.split(".");
+    return segments[0] + "." + segments[1] + ".0.0";
+  } else if (anonymizationMethod === "last_three_octets") {
+    const segments = inputIp.split(".");
+    return segments[0] + ".0.0.0";
+  }
+}
+
+// Anonymization logic for IPv6
+if (isIPv6) {
+  const segments = inputIp.split(":");
+
+  if (anonymizationMethod === "last_three_octets") {
+    // Keep the first segments, anonymize the last three hextet
+    const keepSegments = segments.slice(0, segments.length - 3);
+    return keepSegments.join(":") + "::";
+  } else if (anonymizationMethod === "last_two_octets") {
+    const keepSegments = segments.slice(0, segments.length - 2);
+    return keepSegments.join(":") + "::";
+  } else if (anonymizationMethod === "last_octet") {
+    // Keep the first segments, anonymize the last hextet
+    const keepSegments = segments.slice(0, segments.length - 1);
+    return keepSegments.join(":") + "::";
+  } else if (anonymizationMethod === "redact_ip") {
+    return "::"; // Fully anonymized IPv6
+  }
+}
+
+// Validate and process static IP
+if (anonymizationMethod === "static_ip") {
+  return isValidIP(staticIp) ? staticIp : undefined; // Ensure static IP is valid
+}
+
+// General anonymization
+if (anonymizationMethod === "redact_ip") {
+  return "0.0.0.0"; // For both IPv4 and IPv6
 } else if (anonymizationMethod === "hash_ip") {
   return sha256Sync(inputIp, { outputEncoding: hashEncoding });
 } else {
-  return "Invalid Anonymization Method";
+  return undefined; // Invalid Anonymization Method
 }
 
 
@@ -221,6 +270,6 @@ scenarios: []
 
 ___NOTES___
 
-Created on 12/7/2024, 8:44:40 PM
+Created on 12/12/2024, 12:47:25 PM
 
 
