@@ -2,5 +2,5 @@
 homepage: https://dumbdata.co/
 documentation: https://github.com/your-username/ip-transformer-anonymizer
 versions:
-  - sha: 6163a898e16129bef5d67c42622812411f84ecca
+  - sha: 0dbda71330c0e7864df292d2bfe69119cd4b6ade
     changeNotes: Initial release.
