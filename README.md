@@ -1,4 +1,4 @@
-# IP Transformer/Anonymizer by DumbData.co
+# IP Transformer/Anonymizer
 
 **IP Transformer/Anonymizer** is a custom server-side Google Tag Manager (sGTM) variable template designed to transform or anonymize IP addresses with flexibility and security.
 
